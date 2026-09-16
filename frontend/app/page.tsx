@@ -1,6 +1,5 @@
 import MetricCard from "../components/MetricCard";
 import MentalScoreForm from "../components/MentalScoreForm";
-import { mockDashboardData } from "../data/mockDashboardData";
 import { formatMinutes } from "../utils/formatMinutes";
 import { getLatestRecord } from "@/lib/backend";
 
