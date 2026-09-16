@@ -14,10 +14,10 @@ class RecordRequest(BaseModel):
     """メンタルヘルススコア予測&記録の入力型
     ge -> 最小値設定
     """
-    daily_social_media_hours: float = Field(ge=0, description="1日のSNS利用時間")
-    daily_ai_tool_usage_hours: float = Field(ge=0, description="1日のAIツール利用時間")
-    sleep_hours: float = Field(ge=0, description="1日の睡眠時間")
-    physical_activity_hours: float = Field(ge=0, description="1日の運動時間")
+    daily_social_media_hours: float = Field(ge=0, le=24, description="1日のSNS利用時間")
+    daily_ai_tool_usage_hours: float = Field(ge=0, le=24, description="1日のAIツール利用時間")
+    sleep_hours: float = Field(ge=0, le=24, description="1日の睡眠時間")
+    physical_activity_hours: float = Field(ge=0, le=24, description="1日の運動時間")
 
 class RecordResponse(BaseModel):
     """メンタルヘルススコア予測&記録の出力型
