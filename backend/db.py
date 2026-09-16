@@ -103,29 +103,3 @@ def upsert_record(
     row = results.fetchone()
     conn.close()
     return row
-
-def get_latest_record(user_id: str = DEFAULT_USER_ID) -> sqlite3.Row | None:
-    """指定ユーザーの最新（record_dateが最も新しい）レコードを1件取得する。
-
-    Args:
-        user_id: 取得対象のユーザーID。省略時はDEFAULT_USER_ID。
-
-    Returns:
-        sqlite3.Row | None: 最新のレコード。1件も存在しない場合はNone。
-    """
-    
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    # プレイスフォルダー部分はsequenceとして渡す。
-    cursor = conn.execute(
-        """
-        SELECT * FROM mental_score_records
-        WHERE user_id = ?
-        ORDER BY record_date DESC
-        LIMIT 1
-        """,
-        (user_id,),
-    )
-    conn.commit()
-    conn.close()
-    return cursor.fetchone()
