@@ -1,4 +1,5 @@
 import MetricCard from "../components/MetricCard";
+import MentalScoreForm from "../components/MentalScoreForm";
 import { mockDashboardData } from "../data/mockDashboardData";
 import { formatMinutes } from "../utils/formatMinutes";
 
@@ -34,6 +35,10 @@ export default function Home() {
           value={`${mockDashboardData.stepCount}歩`}
         />
         
+      </section>
+      <section>
+        <h2>現在の記録を入力</h2>
+        <MentalScoreForm/>
       </section>
     </main>
   );
