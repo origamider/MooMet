@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date
-from db import init_db, upsert_record
+from db import init_db, upsert_record, get_latest_record
 
 ml_models = {}
 MODEL_PATH = Path(__file__).resolve().parent.parent / "ml" / "model.sklearn"
@@ -85,3 +85,25 @@ def record(request: RecordRequest):
         return RecordResponse(**dict(row))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/get_latest_data", response_model=RecordResponse)
+def get_latest_data(user_id: str = "default_user"):
+    """指定ユーザーの最新レコードを取得する。
+
+    Args:
+        user_id: 取得対象のユーザーID。省略時は"default_user"。
+
+    Returns:
+        RecordResponse: 最新のレコード。
+
+    Raises:
+        HTTPException: レコードが1件も存在しない場合（404）、
+            またはDBアクセスに失敗した場合（500）。
+    """
+    try:
+        row = get_latest_record(user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    if row is None:
+        raise HTTPException(status_code=404, detail="no record found")
+    return RecordResponse(**dict(row))
