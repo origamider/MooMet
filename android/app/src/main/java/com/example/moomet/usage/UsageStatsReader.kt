@@ -2,7 +2,6 @@ package com.example.moomet.usage
 
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
-import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Process
@@ -20,17 +19,6 @@ class UsageStatsReader(private val context: Context) {
         )
         
         return mode == AppOpsManager.MODE_ALLOWED
-    }
-    
-    fun getTodayUsageStats(): List<UsageStats> {
-        val usageStatsManager = 
-            context.getSystemService(UsageStatsManager::class.java)
-        
-        return usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            getStartOfTodayMillis(),
-            System.currentTimeMillis()
-        ) ?: emptyList()
     }
     
     fun getTodayUsageEvents(): UsageEvents? {
