@@ -5,9 +5,10 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
+import java.time.Duration
 
 class HealthConnectReader(private val context : Context) {
     val requiredPermissions: Set<String> = setOf(
@@ -36,33 +37,33 @@ class HealthConnectReader(private val context : Context) {
         val grantedPermissions =
             healthConnectClient.permissionController.getGrantedPermissions()
 
-            return HealthPermission.getReadPermission(SleepSessionRecord::class) in grantedPermissions
+        return HealthPermission.getReadPermission(SleepSessionRecord::class) in grantedPermissions
     }
 
     suspend fun hasExercisePermission(): Boolean {
         val grantedPermissions =
             healthConnectClient.permissionController.getGrantedPermissions()
 
-            return HealthPermission.getReadPermission(ExerciseSessionRecord::class) in grantedPermissions
+        return HealthPermission.getReadPermission(ExerciseSessionRecord::class) in grantedPermissions
     }
 
-    suspend fun readSleepSessions(startTime: Instant, endTime: Instant): List<SleepSessionRecord> {
-        val response = healthConnectClient.readRecords(
-            ReadRecordsRequest(
-                recordType = SleepSessionRecord::class,
+    suspend fun readTotalExerciseDuration(startTime: Instant, endTime: Instant): Duration {
+        val response = healthConnectClient.aggregate(
+            AggregateRequest(
+                metrics = setOf(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
             )
         )
-        return response.records
+        return response[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL] ?: Duration.ZERO
     }
 
-    suspend fun readExerciseSessions(startTime: Instant, endTime: Instant): List<ExerciseSessionRecord> {
-        val response = healthConnectClient.readRecords(
-            ReadRecordsRequest(
-                recordType = ExerciseSessionRecord::class,
+    suspend fun readTotalSleepDuration(startTime: Instant, endTime: Instant): Duration {
+        val response = healthConnectClient.aggregate(
+            AggregateRequest(
+                metrics = setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL),
                 timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
             )
         )
-        return response.records
+        return response[SleepSessionRecord.SLEEP_DURATION_TOTAL] ?: Duration.ZERO
     }
 }

@@ -23,11 +23,10 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.example.moomet.ui.theme.MooMetTheme
 import com.example.moomet.usage.UsageStatsReader
 import com.example.moomet.usage.UsageDataProcessor
-import com.example.moomet.usage.UsageTimeFormatter
 import com.example.moomet.health.HealthConnectReader
 import com.example.moomet.health.HealthConnectAvailability
 import kotlinx.coroutines.launch
-import java.time.Duration
+import kotlinx.coroutines.Dispatchers
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -88,56 +87,9 @@ class MainActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 if (usageStatsReader.hasUsageStatsPermission()) {
-                                    val usageEvents = usageStatsReader.getTodayUsageEvents()
-
-                                    val appUsageSessionList =
-                                        UsageDataProcessor.createAppUsageSessionList(usageEvents)
-
-                                    for (session in appUsageSessionList) {
-                                        val durationMs = session.endTimeMs - session.startTimeMs
-
-                                        val startTime =
-                                            UsageTimeFormatter.formatTime(session.startTimeMs)
-
-                                        val endTime =
-                                            UsageTimeFormatter.formatTime(session.endTimeMs)
-
-                                        Log.d(
-                                            "MooMetUsageSession",
-                                            "${session.packageName}: " +
-                                                    "$startTime ~ $endTime, " +
-                                                    "duration=${durationMs}ms"
-
-                                        )
-                                    }
-
-                                    val appUsageDataList =
-                                        UsageDataProcessor.createAppUsageDataList(
-                                            appUsageSessionList
-                                        )
-
-                                    val dailyUsageData =
-                                        UsageDataProcessor.createDailyUsageData(appUsageDataList)
-
-                                    Log.d(
-                                        "MooMetDailyUsage",
-                                        dailyUsageData.toString()
-                                    )
-
-                                    for (appUsageData in appUsageDataList) {
-                                        val minutes = appUsageData.foregroundDurationMs / 1000 / 60
-
-                                        Log.d(
-                                            "MooMetAppUsage",
-                                            "${appUsageData.appName} " +
-                                                    "(${appUsageData.category}): ${minutes}分"
-                                        )
-
-                                    }
-
                                     Toast.makeText(
                                         this@MainActivity,
-                                        "対象アプリを${appUsageDataList.size}件取得しました",
+                                        "使用状況へのアクセスは許可済みです",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 } else {
@@ -178,123 +130,133 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("健康データへのアクセスを許可")
                         }
-
-                        Button(
-                            onClick = {
-                                lifecycleScope.launch {
-                                    if (!healthConnectReader.hasSleepPermission()) {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "健康データへのアクセス許可が必要です",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-
-                                        return@launch
-                                    }
-
-                                    val zoneId = ZoneId.systemDefault()
-
-                                    val startTime = LocalDate.now(zoneId)
-                                        .minusDays(1)
-                                        .atTime(12, 0)
-                                        .atZone(zoneId)
-                                        .toInstant()
-
-                                    val endTime = Instant.now()
-
-                                    val sleepSessions =
-                                        healthConnectReader.readSleepSessions(startTime, endTime)
-
-                                    for (sleepSession in sleepSessions) {
-                                        val startTimeText =
-                                            UsageTimeFormatter.formatTime(sleepSession.startTime.toEpochMilli())
-
-                                        val endTimeText =
-                                            UsageTimeFormatter.formatTime(sleepSession.endTime.toEpochMilli())
-
-                                        val durationMinutes =
-                                            Duration.between(sleepSession.startTime, sleepSession.endTime).toMinutes()
-
-                                        Log.d(
-                                            "MooMetSleep",
-                                            "$startTimeText ~ $endTimeText, " +
-                                                    "duration=${durationMinutes}分"
-                                        )
-                                    }
-
-                                    Toast.makeText(
-                                        this@MainActivity,
-                                        "睡眠データを${sleepSessions.size}件取得しました",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        ) {
-                            Text("睡眠データを取得")
-                        }
-                        Button(
-                            onClick = {
-                                lifecycleScope.launch {
-                                    if (!healthConnectReader.hasExercisePermission()) {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "運動データへのアクセス許可が必要です",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        return@launch
-                                    }
-
-                                    val zoneId = ZoneId.systemDefault()
-
-                                    val startOfToday = LocalDate.now(zoneId)
-                                        .atStartOfDay(zoneId)
-                                        .toInstant()
-
-                                    val now = Instant.now()
-
-                                    val exerciseSessions =
-                                        healthConnectReader.readExerciseSessions(startOfToday, now)
-
-                                    Log.d(
-                                        "MooMetExercise",
-                                        "今日の運動セッション: ${exerciseSessions.size}件"
-                                    )
-
-                                    for (session in exerciseSessions) {
-                                        val startTimeText =
-                                            UsageTimeFormatter.formatTime(session.startTime.toEpochMilli())
-
-                                        val endTimeText =
-                                            UsageTimeFormatter.formatTime(session.endTime.toEpochMilli())
-
-                                        val minutes =
-                                            Duration.between(session.startTime, session.endTime).toMinutes()
-
-                                        Log.d(
-                                            "MooMetExercise",
-                                            "$startTimeText ~ $endTimeText, 時間=${minutes}分"
-                                        )
-                                    }
-
-                                    val totalExerciseMinutes = exerciseSessions.sumOf { session ->
-                                        Duration.between(
-                                            session.startTime,
-                                            session.endTime
-                                        ).toMinutes()
-                                    }
-
-                                    Log.d(
-                                        "MooMetExercise",
-                                        "今日の合計運動時間=${totalExerciseMinutes}分"
-                                    )
-                                }
-                            }
-                        ) {
-                            Text("今日の運動データを取得")
-                        }
                     }
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        updateTodayUsageData()
+        updateTodayExerciseDuration()
+        updateRecentSleepDuration()
+    }
+
+    private fun updateTodayUsageData() {
+        if (!usageStatsReader.hasUsageStatsPermission()) {
+            Log.d(
+                "MooMetUsage",
+                "アプリ使用状況の読み取り権限がありません"
+            )
+            return
+        }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val usageEvents =
+                usageStatsReader.getTodayUsageEvents()
+
+            val appUsageSessionList =
+                UsageDataProcessor.createAppUsageSessionList(usageEvents)
+
+            val appUsageDataList =
+                UsageDataProcessor.createAppUsageDataList(
+                    appUsageSessionList
+                )
+
+            val dailyUsageData =
+                UsageDataProcessor.createDailyUsageData(
+                    appUsageDataList
+                )
+
+            Log.d(
+                "MooMetDailyUsage",
+                "自動更新: $dailyUsageData"
+            )
+
+            for (appUsageData in appUsageDataList) {
+                val minutes =
+                    appUsageData.foregroundDurationMs / 1000 / 60
+
+                Log.d(
+                    "MooMetAppUsage",
+                    "自動更新: ${appUsageData.appName} " +
+                        "(${appUsageData.category}): ${minutes}分"
+                )
+            }
+        }
+    }
+
+    private fun updateTodayExerciseDuration() {
+        if (healthConnectReader.getAvailability() != HealthConnectAvailability.AVAILABLE) {
+            return
+        }
+
+        lifecycleScope.launch {
+            if (!healthConnectReader.hasExercisePermission()) {
+                Log.d(
+                    "MooMetExercise",
+                    "運動データの読み取りができません"
+                )
+                return@launch
+            }
+
+            val zoneId = ZoneId.systemDefault()
+
+            val startOfToday = LocalDate.now(zoneId)
+                .atStartOfDay(zoneId)
+                .toInstant()
+
+            val now = Instant.now()
+
+            val totalExerciseDuration =
+                healthConnectReader.readTotalExerciseDuration(startOfToday, now)
+
+            val totalExerciseMinutes =
+                totalExerciseDuration.toMinutes()
+
+            Log.d(
+                "MooMetExercise",
+                "自動更新: 今日の合計運動時間=${totalExerciseMinutes}分"
+            )
+        }
+    }
+
+    private fun updateRecentSleepDuration() {
+        if (healthConnectReader.getAvailability() != HealthConnectAvailability.AVAILABLE) {
+            return
+        }
+
+        lifecycleScope.launch {
+            if (!healthConnectReader.hasSleepPermission()) {
+                Log.d(
+                    "MooMetSleep",
+                    "睡眠データの読み取りができません"
+                )
+                return@launch
+            }
+
+            val zoneId = ZoneId.systemDefault()
+
+            val startTime = LocalDate.now(zoneId)
+                .minusDays(1)
+                .atTime(12, 0)
+                .atZone(zoneId)
+                .toInstant()
+
+            val endTime = Instant.now()
+
+            val totalSleepDuration =
+                healthConnectReader.readTotalSleepDuration(startTime, endTime)
+
+            val totalSleepMinutes =
+                totalSleepDuration.toMinutes()
+
+            Log.d(
+                "MooMetSleep",
+                "自動更新: 今日の睡眠時間=${totalSleepMinutes}分"
+            )
         }
     }
 }
