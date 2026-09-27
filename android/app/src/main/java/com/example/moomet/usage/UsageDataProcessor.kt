@@ -17,41 +17,69 @@ object UsageDataProcessor {
         }
 
         val sessionList = mutableListOf<AppUsageSession>()
-        val startTimeByPackage = mutableMapOf<String, Long>()
+
+        var activePackageName: String? = null
+        var activeStartTimeMs: Long? = null
+
+        fun closeActiveSession(endTimeMs: Long) {
+            val packageName = activePackageName ?: return
+            val startTimeMs = activeStartTimeMs ?: return
+
+            if (endTimeMs > startTimeMs) {
+                sessionList.add(
+                    AppUsageSession(
+                        packageName = packageName,
+                        startTimeMs = startTimeMs,
+                        endTimeMs = endTimeMs
+                    )
+                )
+            }
+
+            activePackageName = null
+            activeStartTimeMs = null
+        }
+
         val event = UsageEvents.Event()
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
 
-            val eventPackageName = event.packageName ?: continue
-
-            if (TrackedAppCatalog.getUsageCategory(eventPackageName) == null) {
-                continue
-            }
-
             when (event.eventType) {
                 UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-                    if (eventPackageName !in startTimeByPackage) {
-                        startTimeByPackage[eventPackageName] = event.timeStamp
+                    val resumedPackageName =
+                        event.packageName ?: continue
+
+                    if (resumedPackageName == activePackageName) {
+                        continue
+                    }
+
+                    closeActiveSession(event.timeStamp)
+
+                    if (TrackedAppCatalog.getUsageCategory(resumedPackageName) != null) {
+                        activePackageName = resumedPackageName
+                        activeStartTimeMs = event.timeStamp
                     }
                 }
 
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val startTime = startTimeByPackage.remove(eventPackageName) ?: continue
+                    val pausedPackageName =
+                        event.packageName ?: continue
 
-                    if (event.timeStamp > startTime) {
-                        sessionList.add(
-                            AppUsageSession(
-                                packageName = eventPackageName,
-                                startTimeMs = startTime,
-                                endTimeMs = event.timeStamp
-                            )
-                        )
+                    if (pausedPackageName == activePackageName) {
+                        closeActiveSession(event.timeStamp)
                     }
+                }
+
+                UsageEvents.Event.SCREEN_NON_INTERACTIVE,
+                UsageEvents.Event.KEYGUARD_SHOWN,
+                UsageEvents.Event.DEVICE_SHUTDOWN -> {
+                    closeActiveSession(event.timeStamp)
                 }
             }
         }
+
         return sessionList
+
     }
 
     fun createAppUsageDataList(appUsageSessionList: List<AppUsageSession>): List<AppUsageData> {
